@@ -1,0 +1,381 @@
+---
+title: 'Practice Report on Project Star 1st Graders '
+author: "Jared Schultz"
+date: "2/4/2023"
+output:
+  html_document:
+    df_print: paged
+    number_sections: no
+  pdf_document: default
+---
+```{r global_options, include=FALSE}
+knitr::opts_chunk$set(fig.pos = 'H')
+```
+
+
+# Abstract 
+
+This report studies a portion of the STAR Dataset. This dataset studies how class size may effect learning out comes of children form kindergartner to 3rd grade. This report will only use data involving first graders. The data is centered on three types of class: small, regular and regular with an aide. The study used a stratified or block design at the school level. This report cleans the data by removing rows with missing values. To obtain our response variable the data is merged so we will have each unit be a teacher. Exploratory data analysis technique show that backing to the claim that there exists a difference and that the small class type seems to have the highest mean. This report tries to answer two question being is there any differences in math scaled scores in 1st grade across class type and is there a class type associated with the highest score. This report uses a two way anova test and Tukey test to answer these main question. the results fins that there are differences among class types and the small class type is associated with the the highest 1st grade scaled math scores. The sensitivity result of our model finds that we break our normality assumption with all other holding. This report along with others find that small class room sizes produce better results among children and we recommend switching classroom style to teach more efficiently.    
+
+
+
+# Introduction
+ 
+
+**Questions of interest:** 
+
+1. Are there any differences in math scaled scores in 1st grade across class types?
+
+2. Which class type is associated with the highest math scaled scores in 1st grade?
+
+
+Questions of further research studied in ref(Achilles,2012):
+
+* What are the effects of small class size in early grades [short term - long term]?
+* What are the effects of teachers education/experience in relation to academic success of students?
+
+
+**Motivation of analysis:**
+Allow schools to achieve better results with teaching styles and sizes.This may also allow for cost effective teaching methods by making classroom smaller it cost the school less money with obtaining high results. How a teacher might preform may or may not be an indicator of education level in which case schools could either look for less or more qualified candidates. 
+
+**Potential impacts of results:**
+To see how class size effects the students academic outcome. If shown successful then schools could focus changes in policy around class size. This would lead to an optimal pupil-teacher ratio that gives the schools the best results. This may save the school money by reducing the number of students that it can take for the upcoming years and hire the correct amount of teachers for desired lass size. 
+
+
+ 
+# Background 
+
+**Explain source of the data, target population, sampling mech. and other variables in data set:**
+
+The source of this data comes from the AER R-library of which it was obtained from the project Star website. The Target population of this study would be policy makers on school boards or at a high level.
+
+The description of the data from the AER library is, 
+
+"Project STAR (Student/Teacher Achievement Ratio) was a four-year longitudinal class-size study funded by the Tennessee General Assembly and conducted in the late 1980s by the State Department of Education. Over 7,000 students in 79 schools were randomly assigned into one of three interventions: small class (13 to 17 students per teacher), regular class (22 to 25 students per teacher), and regular-with-aide class (22 to 25 students with a full-time teacher's aide). Classroom teachers were also randomly assigned to the classes they would teach. The interventions were initiated as the students entered school in kindergarten and continued through third grade." (Kleiber, 2008)
+
+Further information provided from Achilles, 2012 include:
+
+" STAR school had at least one of each class type (small, regular, and regular with aide) in the 
+robust and parsimonious within-school design. The class arrangement was maintained 
+throughout the day, all school year long. There was no intervention other than class size and a 
+full-time teacher aide provided to assist classes. The large sample size and random assignment 
+overcame threats to validity... Cognitive outcomes were measured by norm-referenced tests and criterion-referenced tests 
+aligned to state standards. Non-cognitive outcomes were also assessed." (Achilles, 2012)
+
+
+# Descriptive analysis 
+
+To start working with our data it should first be noted that for this project we will only be looking at 6 variables: 
+
+**math1**      : total math scaled score in 1st grade.
+
+**school1**    : factor indicating school type in 1st grade: "inner-city", "suburban", "rural" or "urban".
+
+**degree1**    : factor indicating highest degree of 1st grade teacher: "bachelor", "master", "specialist", or "phd".
+
+**experience1**: years of teacher's total teaching experience in 1st grade.
+
+**tethnicity1**: factor indicating teacher's ethnicity in 1st grade with levels "cauc" (Caucasian) or "afam" (African-American).
+
+**schoolid1**  : factor indicating school ID in 1st grade.
+
+**star1**      : factor indicating small class (13 to 17 students per teacher), regular class (22 to 25 students per teacher), and regular-with-aide class (22 to 25 students with a full-time teacher's aide)
+
+We will clean the data and delete all rows containing NA values. After cleaning this reduces the dimension from 11,598 x 6 to 6558 x 6, omitting 5,040 rows of data. To make sure that this does not alter the our findings we will compare the summary statistics of the original data of math1 scores to our reduced set. The tables below will show the summary statistics of the math1 variable of the original data set and cleaned.
+
+
+```{r,message=FALSE,warning=FALSE,echo=FALSE}
+# Loading packages and data set
+
+library(AER)
+library(qwraps2)
+options(qwraps2_markup = "markdown")
+library(dplyr)
+library(ggplot2)
+library(gridExtra)
+library(car)
+data("STAR")
+
+# We only want data in first grade 
+# We remove all rows with NA's so that way in two way ANOVA we have a balanced design
+# check the comparison na.omit vs na. rm 
+STAR.1 = STAR%>%dplyr::select(math1, school1,degree1,experience1, tethnicity1, schoolid1, star1)%>% na.omit() 
+```
+
+***
+
+#### First grade math scores using Original Data
+```{r,results='asis',echo=FALSE}
+
+summary.statO =
+  list("First Grade Math Scores" =
+       list("min"       = ~ min(math1,na.rm = T),
+            "max"       = ~ max(math1,na.rm = T),
+            "mean"      = ~ round(mean(math1,na.rm = T),digits = 2),
+            "sd"        = ~ round(sd(math1,na.rm = T),digits = 2)
+       ))
+
+tableO = summary_table(dplyr::group_by(STAR, star1), summary.statO)
+tableO
+
+```
+
+
+
+#### First grade math scores using cleaned data
+```{r,results='asis',echo=FALSE}
+
+summary.stat1 =
+  list("First Grade Math Scores" =
+       list("min"       = ~ min(math1),
+            "max"       = ~ max(math1),
+            "mean"      = ~ round(mean(math1),digits = 2),
+            "sd"        = ~ round(sd(math1),digits = 2)
+       ))
+
+table1 = summary_table(dplyr::group_by(STAR.1, star1), summary.stat1)
+table1
+
+```
+We can see from the tables above that the cleaning procedure did not change the the distribution of math1 scores. This can be seen clearly when looking at the range of each as well as the mean and standard deviation where they differ by less than 0.0025%. 
+
+***
+
+***
+
+In the table below we explore the aggregated students first grade math score by each unique teacher. Thus the scores can be thought of the mean of the students in first grade taught by that teacher or averaged class math score where each teacher is now a unit. Now we can use this data to answer our questions about class-types.
+
+#### Mean score of students taught by each unique teacher
+```{r,results='asis',echo=F,message=FALSE}
+# a summary measure for each teacher in grade 1
+teachers1 = STAR.1 %>% group_by(star1,experience1,tethnicity1,schoolid1) %>% summarise(mean.T = mean(math1))
+
+# Summary table for teachers 
+summary.statT =
+  list("Mean First grade math score per teacher" =
+       list("min"       = ~ round(min(mean.T),digits = 2),
+            "max"       = ~ round(max(mean.T),digits = 2),
+            "mean"      = ~ round(mean(mean.T),digits = 2),
+            "sd"        = ~ round(sd(mean.T),digits = 2)
+       ))
+
+tableT = summary_table(dplyr::group_by(teachers1, star1),summary.statT)
+tableT
+
+# FINDING MEANS OF SCHOOLS 
+test = teachers1 %>% group_by(schoolid1,star1) %>% summarise(mean.School = mean(mean.T,na.rm = T))
+```
+
+Right away looking at the means of each class type it is easy to see that small class type has the largest mean and max. However small type also has the largest standard deviation at 26.68. Below we explore these summary statistics for class type through box plots .  It should also be noted that the number of observations in each class type are different thus our model in the later section will have an imbalanced design.  
+
+
+***
+```{r,fig.align='center',echo=FALSE}
+ggplot(data = teachers1,aes(x = star1,y = mean.T)) + geom_boxplot(data = teachers1,aes(fill = star1),show.legend = F)+
+  labs(y= "Averaged Class Math Score",x = "Class Size ",title = "First Grade Class Scores by Type" )
+
+#d1 = ggplot(data = teachers1,aes(x = degree1,y = mean.T)) + geom_boxplot(data = teachers1,aes(fill = degree1),show.legend = F)+
+#  labs(y= " ",x = "Degree")
+
+```
+Now that we have looked at class type we should also look at some statistics of differences of class types through different schools. Below is table of averaged scores per class type per school. so each school is it's own unit. 
+
+```{r,fig.align='center',echo=FALSE}
+summary.statsc =
+  list("Mean First grade math score per School" =
+       list("min"       = ~ round(min(mean.School),digits = 2),
+            "max"       = ~ round(max(mean.School),digits = 2),
+            "mean"      = ~ round(mean(mean.School),digits = 2),
+            "sd"        = ~ round(sd(mean.School),digits = 2)
+       ))
+
+tablesc = summary_table(dplyr::group_by(test, star1),summary.statsc)
+tablesc
+
+
+```
+
+Here it can be seen that small still has the maximum score and highest mean.There is little difference of regular class size v.s regular +aide. 
+Also this is not a balanced design here since not all class types have the same number of observations and since there is not 80 in each that means some schools did not do all three types or perhaps the data was never fully recorded and was deleted in our cleaning.
+***
+
+
+
+# Inferential analysis 
+
+We will use the additive factor effects two way model with constants:
+
+\begin{equation}\label{eqn:anova2}
+Y_{ijk}=\mu.. + \alpha_i+\beta_j + \epsilon_{ijk},\ k=1,\dots,n_{ij}, \ j=1,\ldots, b, i =1,\ldots, a,
+\end{equation}
+where $\{\epsilon_{ijk}\}$ are i.i.d. $N(0,\sigma^2)$ and 
+
+\begin{equation}\label{eqn:anova2 constrants}
+\sum_{i}\alpha_i = \sum_j \beta_j = 0 
+\end{equation}
+
+It should also be noted that: $\alpha_i = \mu_i. -\mu..$ and $\beta_j = \mu_{.j} -\mu..$ where $\mu..$ is the population mean and $\mu_{.j}$ is the overall mean for factor A taking the i'th level. The same definition holds for $\mu_{.j}$ 
+
+The response variable in the model is the mean.T variable which is the averaged first grade class score. We need this as our response variable given the design of this experiments puts class type and schoolid1 as independent factors. Since a main assumption of our two way model is that the two factors must be independent this is the required way for this model. 
+
+The two factor effect terms are Star1 and schoolid1. Star1 has 3 factor levels and schoolid has 80 factor levels. This is also an imbalanced model as mentioned previously.
+
+**No interaction terms in model**: We do not need the interaction term since we can fit a full model including the interaction term and find that the interaction term is not significant. That is we would fail to reject the null that $(\alpha\beta)_{ij} =0 \quad \forall ij$ at any meaning full type one error level. This can be seen in the summary below:
+```{r}
+model4 = aov(mean.T~star1*schoolid1,data = teachers1)
+summary(model4)
+```
+Thus our summary table for our fitted model should not include the interaction term. **The table below is the summary table for model this report will be using**
+
+```{r,echo=FALSE}
+# Fitting the two way model 
+model1 = aov(mean.T~star1 +schoolid1,data = teachers1)
+summary(model1)
+```
+
+To answer our first question we will consider a test on $\alpha_i$ which in our case is the difference of the mean of class size i (i=1,2,3) to the population mean. We will test at a type one error rate of $\alpha = 0.01$.
+
+$H_0 : \alpha_i =0 \quad \forall i =1,2,3 \quad v.s \quad H_a : \text{not all }\alpha_i \text{ equal zero}$
+
+$F^* = 20.57 \text{ and  p-value =} 5.05e^{-16}$
+
+$\text{Since our found p-value is less than }\alpha =0.01\text{ we will reject the null hypothesis that all alphas are equal.}$
+$\text{In other words we would reject the claim that the mean of first grade scores are the same per each class type.}$
+
+Doing the same test for schoolid1 would end in the results that we would reject the claim that mean of first grade scores are the same per school. 
+We can see these results and information from testing from the table below with our fitted model summary statistics.
+
+
+Now to answer our secondary question of interest: which class type is associated with the highest math scaled scores in 1st grade. To answer this question we will preform simultaneous inference using a Turkey test at a type one error rate of 1 percent. Our model hypothesis test will be of the following form:
+
+$H_0 : \text{For all i there exists a j such that } \mu_i \le \mu_j \quad v.s \quad H_a: \text{There exists an i such that } \mu_i>\mu_j \quad  \forall i \ne j$
+
+The simultaneous testing for both factors are plotted graphically below:
+
+***
+
+```{r,fig.align='center',echo=FALSE}
+# preforming a 95% Tukey CI 
+Tuky = TukeyHSD(model1,conf.level = 1 - 0.01)
+par(mar = c(5,9,5,2))
+plot(Tuky,las =1,col= "brown")
+
+# note that we can see in the plot that testing of each mean 
+```
+
+
+**Inference from plot 1 :** Plot 1 shows the comparison of difference of the three factor types. When our confidence interval contains zero it  tells us that we can not reject our null hypotheses at that level combination. That is to say that we cannot reject that the means are different at our stated type one error level.
+
+**small - regular :** Confidence interval does not contain 0, thus reject the null hypothesis that means of small and regular class size are the same. Note CI is positive
+
+**regular+aide - regular :** Confidence interval does contain 0, thus do not reject the null hypothesis that means of regular+aide and regular class size are the same. 
+
+**regular+aide - small :** Confidence interval does not contain 0, thus reject the null hypothesis that means of small and regular+aide class size are the same. Note CI is negative
+
+**Results :** Since our test for small - regular and regular+aid - small both showed differences and the confidences intervals were positive and negative respectively. Thus we can conclude that the small class size has the highest first grade mean scores  
+
+
+**Inference from plot 2 :** inference from plot 2 is not possible since there are so many confidence intervals. There are 2850 confidence intervals for this factor and it can be found that only 181 Confidence intervals do not contain 0 at a 1% type one error level. Thus a mass for a majority there exists no difference of means between schools.  
+
+
+# Sensitivity analysis 
+
+**Residual analysis :** From our model above we make several assumptions on our error terms that can be verified through residual analysis. In the plots below we will explore if our assumptions hold up.
+
+
+
+```{r,echo=F,fig.align='center'}
+# QQ-plot
+plot(model1,which = 2)
+
+# Visual inspection of non-constant variance
+
+# studentized residuals
+resid.stu = rstudent(model1)
+
+# studentized residuals vs fitted
+plot(resid.stu~model1$fitted.values,pch = 1,xlab = "Fitted Values",ylab = "Studentized Residuals")# may show some evidence of non-constant variance and some outliers possible
+abline(h=0)
+
+title(main = "Studentized residuals vs fitted values")
+```
+
+
+#### Assumptions on Error terms
+
+
+**Normal Error Distribution :** From the Normal Q-Q plot we can see that our errors have right heavy tailed distribution. Thus the normal error distribution assumption does not hold. We can use Shapiro test at an alpha level of 5% to confirm as well:
+
+```{r}
+shapiro.test(model1$residuals)
+```
+Here the we would reject the null hypothesis at alpha level of 5%. That is to say we reject the claim that the distribtion is normal.
+
+
+**Non-Constant Variance :** From the Studentized residuals vs fitted values there is very slight evidence of non-constant variance thus from the plot we will not assume this assumption holds. We will further verify it with a proper test at $\alpha = 0.01$. The test we will use will be levene's test. 
+
+First allow $d_{ij}$ to be the absolute value of model1's residuals. The testing claims will be 
+
+$H_0 : \text{All }E[d_{ij}.] \text{ are the same } \quad v.s \quad H_a:  \text{Not all }E[d_{ij}.] \text{ are the same }$
+
+```{r,echo=FALSE}
+teachers1$res.abs = abs(model1$residuals)
+summary(aov(res.abs~star1+schoolid1,data = teachers1))
+
+```
+The results from the table above show that we would fail to reject the null-hypothesis and thus we would state that the non-constant variance assumption holds. This would hold for both class type and schoolid at a type one error level of 1%. Thus we claim that our model does satisfy the non-constant variance assumption.
+
+**Independence of error terms:** Since the design of the experiment was a block design at the level of the class rooms we have independence between class size and schools.
+
+**Outliers :** From the Studentized residuals vs fitted values there is no clear evidence of outliers. 
+
+**Missing values :** As mention in the previous section about data cleaning that the data was not impacted by missing values. 
+
+**Type 1 or Type 2 model** Since our model is imbalanced its needed to check how sensitive our model is to the weights. Preforming a F-test in the opposite order as done before gave no deference in explaining if the main affects are significant. Thus a Type 1 model works fine. We can see evidence of this in the table below:
+
+```{r,echo=FALSE}
+# Fitting the two way model 
+model3 = aov(mean.T~schoolid1+star1,data = teachers1)
+summary(model3)
+```
+# Discussion 
+
+
+In this project we explore a cleaned and manipulated version of the STAR data set. The study wishes to answer two main questions which are if there exists a difference and if there is a class type that is associated with the highest mean. Preforming EDA using boxplots shows that there appears to be a difference of means within class types and all the variances of each class type appear the same.To answer our initial questions we use a two way factor effect form anova model with out interaction term. We negate this term since an F-test showed that it is not needed. The study used a block design so there interaction from different schools and class type so we have independent factor terms for the two way anova model.Our findings show that there is a difference in means and that the small class type has the highest averaged class score. The model does lack normality of error terms assumption. From this analysis it is recommended to compare analysis of other grades and use other observation variables to confirm these results. If the results are validated then it is recommended to switch class styles to a small to better education and save money.
+
+Findings from Aftunion, 2014 show that other projects such as project STAR have been studied and found similar results. A 1999/2010 update and follow up on project star's student indicated the following, 
+
+**"**1999 Update
+Researchers reported that the effects of small class sizes in grades K-3 lasted all the way through high school. Students from small classes are:
+
+* More likely to graduate from high school on schedule and less likely to drop out;
+* More likely to have enrolled in honors classes and to graduate in the top 10 percent of their class; and
+* More likely to take SAT or ACT exams, indicating that they plan to go on to college. Further, the black-white achievement gap is reduced by 56 percent for black students who began school in small classes.
+
+Researchers also found that students in small classes in grades K-3 were between six and 13 months ahead of their regular-class peers in math, reading, and science in each of grades 4, 6, and 8. Researchers reported that for the benefits to be sustained through later grades, at least three years in a small class are necessary. In addition, the benefits of having been in a small class in the primary years increase from grade to grade.
+
+2010 Update
+Researchers from Amherst College attempted to differentiate which kinds of schools and students benefit the most from smaller class sizes. Findings:
+
+* The researchers found that all students in high-poverty schools benefit from reduced class sizes, with high-achieving students benefiting the most.
+* Researchers also found no evidence of changes in teacher behavior or pedagogical practice when class sizes are reduced, indicating that “student differences account for the positive relationship between achievement and the benefit of smaller classes.” **"**(Aftunion,2014)
+
+
+# Acknowledgement {-}
+
+TA:Jing Lyu
+
+# Reference {-}
+
+Achilles, C. M. (2012, September 30). Class-size policy: The Star Experiment and related class-size studies. NCPEA policy brief. volume 1, Number 2. NCPEA Publications. https://eric.ed.gov/?id=ED540485 
+
+Aftunion. (2014, September 16). Supporting research - class size. American Federation of Teachers. Retrieved February 11, 2023, from https://www.aft.org/education/publications/school-improvement/supporting-research-class-size 
+
+Kleiber,C &  Zeileis,A. (2008). Star: Project star: Student-teacher achievement ratio. RDocumentation. Springer-Verlag.      https://www.rdocumentation.org/packages/AER/versions/1.2-9/topics/STAR
+
+# Session info {-}
+
+
+```{r}
+sessionInfo()
+```
