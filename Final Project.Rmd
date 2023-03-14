@@ -1,7 +1,7 @@
 ---
 title: 'Final Course Project '
 author: "Jared Schultz"
-date: "2/23/2023"
+date: "3/14/2023"
 output:
   html_document:
     df_print: paged
@@ -15,14 +15,14 @@ knitr::opts_chunk$set(fig.pos = 'H')
 
 # Abstract 
 
-This report uses uses data that has been simplified from a complex neurological experiment from Steinmetz et al (2019). This report uses a subset of this data which includes 5 sessions on two mice named "Cori" and "Frossman". The report wishes to find how neurons in the visual cortex respond to stimuli presented on the right and left as well  The report takes the data containing neural spikes from each trail experiment and average them over a 0.4 second interval and by the number of total neurons per session. This new variable is named the firing rate and becomes the outcome variable for this report. Using descriptive analysis with tables there appears to be a difference in the mean neuron firing rate per second from sessions 1-3 and 4-5 relating to the two different mice. Comparing results from the right and left contrasts it is difficult to make a clear conclusion looking at a table. Next using a mixed effect model and fitting it to an anova type 2 we find that there is no interaction between the left and right contrasts. The final model 2 uses a transformation of square root on firing rate to satisfy model assumption. This model finds that the main effects of the left and right contrast are significant on the square root of fire rate. Using K-fold model validation finds that the model has 3.7% error. This report also aims at answering how to predict the out come of the experiment which is if the mouse got the correct choice or not. This report uses a logistic additive model to answer this question. We find that firing rate is a positive predictor when trying to figure out this question. Model validation for this part achieves a 44% TPR and 7%FPR. The overall the data set has many holes which makes it hard to make any real claims to our answers.   
+This report uses uses data that has been simplified from a complex neurological experiment from Steinmetz et al (2019). This report uses a subset of this data which includes 5 sessions on two mice named "Cori" and "Frossman". The report wishes to find how neurons in the visual cortex respond to stimuli presented on the right and left as well as predict the outcome of each trail. The report takes the data containing neural spikes from each trail experiment and average them over a 0.4 second interval and by the number of total neurons per session. This new variable is named the firing rate and becomes the outcome variable for this report. Using descriptive analysis with tables there appears to be a difference in the mean neuron firing rate per second from sessions 1-3 and 4-5 relating to the two different mice. The later model uses a random terms per session in hope of collecting all randomness that is presented in each session. This includes the differences seen from the two mice. Comparing results from the right and left contrasts it is difficult to make a clear conclusion looking at our table, this leads to further testing. Next using a mixed effect model and fitting it to an type 3 anova we find that there is no interaction between the left and right contrasts. The final model 2 uses a transformation of square root on firing rate to satisfy model assumption. This model finds that the main effects of the left and right contrast are significant on the square root of fire rate. The model also finds that contrast level 0.25 is not super significant in both the right and left. This may indicate the mouse having difficulty in determining differences with this level. Using K-fold model validation finds that the model has 3.7% error. This report also aims at answering how to predict the out come of the experiment which is if the mouse got the correct choice or not. This report uses a logistic additive model to answer this question. We find that firing rate is a positive predictor when trying to figure out this question. Model validation for this part achieves a 44% TPR and 7% FPR and an ROC area of 0.69. The overall the data set has many holes which makes it hard to make any real significant claims.   
  
 # Introduction
  
 
 **Questions of interest:** 
 
-The primary objectives of this project is to understand how the neural activity in the visual cortex is modulated by the two stimuli and how this information can be utilized to predict the outcome of the trial. To be specific, two questions of interest are as follows. 
+This study aims at using mice to better understand the neurology of the brain. This study mainly focuses on neural activity of mice within their neural cortex. This neural activity will be recorded as the mice see stimuli and respond to them. Using this data we wish to analyze the results to make inferences about how neurons respond and if we can predict the choice of the mice based on our data. To summarize, the objectives we wish to answer are the following:  
 
 1. How do neurons in the visual cortex respond to the stimuli presented on the left and right?
 
@@ -31,18 +31,18 @@ The primary objectives of this project is to understand how the neural activity 
 
 **Motivation of analysis:**
 
-The motivations for this analysis try to better understand the workings of the inner brain. This report can make simple claims about how neurons might work. However, in a broader aspect involving the original experiment more meaningful interpretations involving neuroscience might come into play. However i am not a nuero-scientist.
+The motivations for this analysis try to better understand the workings of the inner brain. This report can make simple claims about how neurons might work. However, in a broader aspect involving the original experiment, more meaningful interpretations involving neuroscience might come into play. However i am not a neuroscientist, thus i lack the fundamentals and credibility to fully explain what motivations we might have. In terms of this class the motivation of this analysis is done so i get a good final grade.
 
 **Potential impacts of results:**
  
-For the original study: Breakthroughs in understanding how neurons in spacial locations work when stimuli is given. 
+For the *original study*: Breakthroughs in understanding how neurons in spacial locations work when stimuli is given. The original paper makes claims that predictions of outcomes can be made based on analyzing the neuron information recorded. From Steinmetz et al (2019), they state that this study, "reveal[s] organizing principles for the distribution of neurons encoding behaviorally relevant variables across the mouse brain". 
 
-For this class: Passing grade lol.
+For *this class*: Although our paper uses data that has been simplified from the original data set, potential impacts may involve being able to predict the choice of the mouse based on a simplified outcome variable. This could potentially say that not all information that was originally given in the spike train is needed to predict the outcome of the mice per each trial. We could hopefully claim that there doesn't exist an interaction between the right and left contrasts when looking at neuron firing from the visual cortex. This might imply that the neurons that are responsible for right eye may have some independence of the left eye.   
  
 # Background 
 
 In this project a subset of data collected from Steinmetz et al (2019) will be used. The study that collected this data followed the following design information. 
-The data collected from Steinmetz et al (2019) is collected from a study that was preformed on 10 mice over 39 sessions. The goal of the study is to understand how vision, choice and behavioral engagements arise from neuron activity across the brain. That is to say they wish to understand what neurons or relative neural areas are active when stimuli is presented. The study does this by using “Neuropixels probes to record from approximately 30,000 neurons in 42 brain regions  of mice performing a visual discrimination task”(Steinmetz et al, 2019).  That is to say that in each session of the experiment consisted of serval hundred trails where in each trail visual stimuli was randomly presented to the mouse on two screens position on both sides of it. The stimuli are varied in terms of contrast levels  taking values {0, 0.25, 0.5, 1} with a level of 0 indicating no stimuli. Thus, for each trail stimuli could be presented on the right screen left screen, both or neither. The mice were given a water reward based on if the mice turned the wheel in the direction of the screen that had the highest contrast. Thus, the mice had 3 options to either turn the wheel right left or not move it. The timeline of each trail was presented where mice could move as soon as stimuli was presented. The focus of the analysis is from the stimulus onset to 0.4 seconds after onset. The mice were not given any reward after an auditory nose was made and was considered a no-go after 1.5 seconds. It should also be noted that the experimenter was not blinded to the contrast levels during the experiment. 
+The data collected from Steinmetz et al (2019) is collected from a study that was preformed on 10 mice over 39 sessions. The goal of the study is to understand how vision, choice and behavioral engagements arise from neuron activity across the brain. That is to say they wish to understand what neurons or relative neural areas are active when stimuli is presented. The study does this by using “Neuropixels probes to record from approximately 30,000 neurons in 42 brain regions  of mice performing a visual discrimination task”(Steinmetz et al, 2019).  That is to say that in each session of the experiment consisted of several hundred trails where in each trail visual stimuli was randomly presented to the mouse on two screens position on both sides of it. The stimuli are varied in terms of contrast levels  taking values {0, 0.25, 0.5, 1} with a level of 0 indicating no stimuli. Thus, for each trail stimuli could be presented on the right screen left screen, both or neither. The mice were given a water reward based on if the mice turned the wheel in the direction of the screen that had the highest contrast. Thus, the mice had 3 options to either turn the wheel right left or not move it. The timeline of each trail was presented where mice could move as soon as stimuli was presented. The focus of the analysis is from the stimulus onset to 0.4 seconds after onset. The mice were not given any reward after an auditory nose was made and was considered a no-go after 1.5 seconds. It should also be noted that the experimenter was not blinded to the contrast levels during the experiment. 
 
 This project will focus specifically on the spike trains of the neurons from the visual cortex, from the onset of the stimuli to 0.4 seconds post onset. Only 5 sessions containing data from the mice Cori and Frossman will be used.
 
@@ -60,6 +60,8 @@ library(gridExtra)
 library(car)
 library(lme4)
 library(lmerTest)
+library(MASS)
+library(reactable)
 ```
 
 ```{r, echo=F, eval=T}
@@ -117,7 +119,7 @@ Allow the different sessions with the index i = 1,2,3,4,5. Next let the number o
 \text{firing rate} = \frac{1}{N_{ni}*t}\sum_{j=1}^{N_{Ti}}spks(j)
 \end{equation}
 
-By selecting this choice of outcome variable it reduces the dimension of the original data greatly. It should be noted that this choice of outcome results in a significant loss of original information however it allows a Anova model to be fitted. Other exploration methods to answer this question will be exploring after using an Anova model to answer these questions. 
+By selecting this choice of outcome variable it reduces the dimension of the original data greatly. It should be noted that this choice of outcome results in a significant loss of original information. The main justification for using this method instead of others is it allows us to fit it allows an Anova model to be fitted. The mean was chosen over something like the median since the mean is slightly more interpretable than the median given the number of neurons per each session have a different length.
 
 After formatting the data to allowing sessions to become a factor our new data set is a data frame containing 1196 trials with 6 variables. Below we will explore the data set by session number to get summary statistics of the neuron firing rate per session. Exploration of the data based on the left contrast and right contrast will also be explored in the tables below.    
 
@@ -126,7 +128,7 @@ After formatting the data to allowing sessions to become a factor our new data s
 
 ***
 
-#### Summary Table 1
+#### Summary Table 1 : Neuron firing rate per session
 ```{r,results='asis',echo=FALSE}
 
 summary.stat0 =
@@ -144,7 +146,7 @@ table0
 
 
 
-#### Summary Table 2
+#### Summary Table 2 : Neuron firing rate per left contrast level
 ```{r,results='asis',echo=FALSE}
 
 summary.stat0 =
@@ -161,7 +163,7 @@ table0
 
 ```
 
-#### Summary Table 3
+#### Summary Table 3: Neuron firing rate per right contrast level
 ```{r,results='asis',echo=FALSE}
 
 summary.stat0 =
@@ -199,9 +201,7 @@ table0
 
 **Summary table 3 inference:** This summary table gives summary statistics for the neuron firing rate for each Right contrast level.Contrast level 0 also has the lowest min 0.4 and largest max 7.22 out of all contrast levels. the smallest mean here is at level0.25 at 2.68 and the largest at 3.19 at level 1.  Level 0 has the largest number of trails at 522 and level 0.5 has the smallest number of trials at 192.
 
-**Comparison of tables 2&3** Both tables 2 and 3 show that the distribution of trials for each level appear roughly the same. Data about the mean is too close to determine if there is a difference of means and testing would be needed to clearly determine this. 
-
-
+**Comparison of tables 2&3** Both tables 2 and 3 show that the distribution of trials for each level appear roughly the same. Data about the mean is too close to determine if there is a difference of means and testing would be needed to clearly determine this. Both trails for the left and right contrast are the close to the same. That means for each left contrast and right contrast were trained on by the same amount. This goes to argue that the mice were trained the same so there should be no issues with bias in training one but not the other.  
 
 
 note: Interaction plots are a 4x4 interaction plot and is not easy to read when there are 5 sessions.
@@ -234,12 +234,16 @@ Further definitions for the model include the following:
 \alpha_i = \mu_i.- \mu..,\quad \beta_j = \mu_{.j} - \mu..,\quad (\alpha\beta)_{ij} = \mu_{ij} -\mu_i.-\mu_{.j} +\mu..
 \end{equation}
 
-For the stated model $Y_{ijk}$ will be the observed `fire rate` of the kth session at the ith left contrast level and jth right contrast level.$\mu..$ is defined as the population mean. $\alpha_i$ is defined as the fixed effect of variable `contrast_left` with i = 1,..,4 being levels {0, 0.25, 0.5, 1} and $\beta_j$ defined as the fixed effect of variable `contrast_right`with i = 1,..,4 being levels {0, 0.25, 0.5, 1}. $\gamma_{k(i)}$ is defined as the whole plot error and $\epsilon_{ijk}$ is defined as the split plot error.
+For the stated model $Y_{ijk}$ will be the observed `fire rate` of the kth session at the ith left contrast level and jth right contrast level.$\mu..$ is defined as the population mean over all factor levels. $\alpha_i$ is defined as the fixed effect of variable `contrast_left` with i = 1,..,4 being levels {0, 0.25, 0.5, 1} and $\beta_j$ defined as the fixed effect of variable `contrast_right`with i = 1,..,4 being levels {0, 0.25, 0.5, 1}. $\gamma_{k(i)}$ is defined as randomness due to each session also called the whole plot error and $\epsilon_{ijk}$ is defined as the split plot error. This model chooses to add `sessions` as a random term to account for randomness seen with using two different mice along with other random variables that we cannot account for in the experiment.
+
+#### ANOVA Table: Full model with interaction 
 
 ```{r,echo=F}
 lmr = lmer(firing_rate ~ contrast_left * contrast_right + (1 |Session), 
                  data = data)
-anova(lmr,test.statistic =  "F")
+#anova(lmr,test.statistic =  "F")
+reactable(round(anova(lmr,test.statistic =  "F"),digits = 3),
+          bordered = T,highlight = T,striped = T)
 ```
 
 After fitting our data to the model given we end up with the Anova table above. From this summary table we will decided to test the interaction term.
@@ -254,12 +258,14 @@ Y_{ijk}= \mu.. + \alpha_i+\beta_j+ \gamma_{k(i)}+ \epsilon_{ijk},\ k=1,\dots,n_{
 
 This new model will now be defined as model 1. Model 1 is now an additive random mixed effects model and the new anova table can be seen below. With this new additive model interpretations now become easier. 
 
+#### ANOVA Table: Additive model
+
 ```{r,echo=FALSE}
 M1 = lmer(firing_rate ~ contrast_right + contrast_left  + (1 |Session), 
                  data = data)
 #M1
 fit = anova(M1,test.statistic =  "F")
-fit
+reactable(round(fit,digits = 3),bordered = T,highlight = T,striped = T)
 ```
 **Testing Contrast left:** Testing $H_0: \alpha_i = 0 \quad \forall i \quad  vs \quad H_a: \text{not all } \alpha_i = 0$ at $\alpha=0.01$ finds that our p-value <0.00001 using Satterthwaite's method which is less than $\alpha=0.01$ thus we reject the null hypothesis. That is we reject the claim that there are no differences in the means of fire rate for each left contrast level. 
 
@@ -272,6 +278,8 @@ $\frac{\sigma^2_{\alpha}}{\sigma^2_{\gamma} + \sigma^2} = \frac{1.274}{1.676} = 
 
 That is to say that 76% of the variation of firing rate is due to the different sessions.
 
+**Note:** *This section skips model interpretation since this model does not pass sensitivity analysis. Model interpretation will be done on the next model below* 
+
 
 ### Transformations 
 
@@ -283,15 +291,29 @@ looking ahead into the report we find that our current model fails the non-const
 
 This transformed model 1 will now be called model 2. Using model 2 the results above still hold and we will update them here. The Analysis of variance table for model 2 is below:
 
+#### ANOVA Table:  Additive model w/ sqrt(firing rate)
+
 ```{r,echo=FALSE}
 M2 = lmer(sqrt(firing_rate) ~ contrast_right + contrast_left  + (1 |Session), data = data)
 #M1
 fit = anova(M2,test.statistic =  "F")
-fit
+reactable(round(fit,digits = 3),bordered = T,highlight = T,striped = T)
 ```
 **Testing Contrast left:** Testing $H_0: \alpha_i = 0 \quad \forall i \quad  vs \quad H_a: \text{not all } \alpha_i = 0$ at $\alpha=0.01$ finds that our p-value <0.00001 using Satterthwaite's method which is less than $\alpha=0.01$ thus we reject the null hypothesis. That is we reject the claim that there are no differences in the means of the square root of fire rate for each left contrast level.
 
 **Testing Contrast right: **Testing $H_0: \beta_j = 0 \quad \forall i \quad  vs \quad H_a: \text{not all } \beta_j = 0$ at $\alpha=0.01$ finds that our p-value <0.00001 using Satterthwaite's method which is less than $\alpha=0.01$ thus we reject the null hypothesis.That is we reject the claim that there are no differences in the means of the square root of fire rate for each right contrast level
+
+**Inference** Given that the main effects are significant of the model the results in terms of our outcome variable can be interpreted as there are mean differences among means of the square root of `fire rate` per contrast level in both left contrast and right contrast. Thus in terms of the experiment showing mice different contrasts levels required different amounts of neurons. 
+
+#### Model interpretation
+
+**Sample Mean**: For the model stated we find the mean to be significant at an alpha level of 0.001. The sample mean for this model is 1.60 which means that for a randomly selected session in our model the mean transformed firing rate is 1.6 for any factor level of contrast left or right.  
+
+**Fitted values for** $\alpha_i$ : For every contrast level except contrast level 0.25  we find that the effects of each left contrast level to be significant on the model at an alpha level of 0.001. For contrast level 0.25 we determine this level to not be significant for any reasonable alpha level. The estimates of the significant levels are positive and small. Thus the effects of each contrast level are small.  
+
+**Fitted values for** $\beta_j$ : For every contrast level except contrast level 0.25  we find that the effects of each left contrast level to be significant on the model at an alpha level of 0.001. For contrast level 0.25 it is significant at an alpha level of 0.05. The estimates of the significant levels are positive and small. Thus the effects of each contrast level are small.
+
+For each left and right contrast the level 0.25 seem to be less significant than the others. This may suggest that is factor level may be the hardest to determine for the mouse since it is not able to make a quick response within the recorded interval of [0,0.4] seconds.  
 
 **Variation due to randomness of sessions**
 
@@ -299,7 +321,6 @@ $\frac{\sigma^2_{\alpha}}{\sigma^2_{\gamma} + \sigma^2} = \frac{0.128}{.165} = .
 
 The proportion of variance that is due to the random effects of session is now 77.8%. 
 
-**Inference** Given that the main effects are significant of the model the results in terms of our outcome variable can be interpreted as there are mean differences among means of the square root of `fire rate` per contrast level in both left contrast and right contrast. Thus in terms of the experiment showing mice different contrasts levels required different amounts of neurons. 
 
 ***
 
@@ -307,18 +328,20 @@ The proportion of variance that is due to the random effects of session is now 7
 
 **Residual analysis :** From our model 1 above we make several assumptions on our error terms and random terms that can be verified through residual analysis. In the plots below we will explore if our assumptions hold up. 
 
-For this part we will consider the transformation of square root on the response variable `firing rate` to improve the results of the sensitivity analysis. The model used for impovement was defined earlier as model 2 and once again defined as:
+For this part we will consider the transformation of square root on the response variable `firing rate` to improve the results of the sensitivity analysis. The model used for improvement was defined earlier as model 2 and once again defined as:
 
 \begin{equation}\label{eqn:model3}
 \sqrt{Y_{ijk}}= \mu.. + \alpha_i+\beta_j+ \gamma_{k(i)}+ \epsilon_{ijk},\ k=1,\dots,n_{ij}, \ j=1,\ldots, b, i =1,\ldots, a,
 \end{equation}
 
-The reason this transformation is chosen is because it is the simplest transformation that improves the normality assumption as well as the non-constant variance assumption. Other transformations such as $(Y_{ijk})^{0.8}$ were also considered having similar results to the chosen transformation. More details are given below. 
+The reason this transformation is chosen is because it is the simplest transformation that improves the normality assumption as well as the non-constant variance assumption. Other transformations such as $(Y_{ijk})^{0.8}$ were also considered having similar results to the chosen transformation.
 
 
 **Normal Distribution for the Error term and Random term:**
 
-Since model 1 includes a random term then the assumptions must also be check of that term as well. Below are the QQ plots for the residuals and random effects. 
+Since model 1 includes a random term then the assumptions must also be check of that term as well. Below are the QQ plots for the residuals and random effects.
+
+#### QQ-plot: Comparsion between model 1 and model 2 
 
 ```{r,fig.align='center',echo=FALSE}
 par(mfrow = c(1, 2))
@@ -341,36 +364,46 @@ par(mfrow = c(1, 2))
 
 **Interpretation:** The top two plots uses the model with no transformation (model 1). Both QQ-plots of the residuals and random effects look mostly normal. Comparing them to the transformed model (model 2) there appears to be a slight improvement of normality with model 2's residuals and little to no change with the random effects in model 2. There does appear to be one outlier from model 1's residual plot that the transformation scales down. Overall the transformation did make normality slightly better but does not seem to be needed that much.    
 
+***
+
 **Non-Constant Variance :** 
 For this assumption we will look at the plot of fitted values against residuals and the Levene test: 
+
+#### Model 1 Fitted vs residuals + Levene test table
 
 ```{r,fig.align='center',echo=FALSE}
 plot(M1,main = "Residuals vs Fitted values", xlab = "Fitted values", ylab = "Residuals",col = "black")
 
 absr = abs(resid(M1))
 lmr4 = lmer(absr ~ contrast_right + contrast_left  + (1 |Session), data = data)
-Anova(lmr4)
-
+#Anova(lmr4)
+reactable(round(Anova(lmr4),digits = 3),bordered = T,highlight = T,striped = T)
 ```
+
+#### Model 2 Fitted vs residuals + Levene test table
+
 ```{r,echo=FALSE,fig.align='center'}
 plot(M2,main = "Residuals  vs Fitted values (sqrt)", xlab = "Fitted values", ylab = "Residuals", col = "red")
 
 absr1 = abs(resid(M2))
 lmr4 = lmer(absr1 ~ contrast_right + contrast_left  + (1 |Session), data = data)
-Anova(lmr4)
+#Anova(lmr4)
+reactable(round(Anova(lmr4),digits = 3),bordered = T,highlight = T,striped = T)
 ```
+
 **Interpretation** 
 
 Model 1:
 
-Looking at the plot with no transformation visually it appears that non-constant variance seems to be present near the ends of the fitted values. Doing a levene test by taking the absolute values of the residuals vs our predictors in an a mixed effects anova model gives us a p-value of 0.0072 for the right contrast and a p-value of 0.0524. Thus testing at a type 1 error level of 1% we would not reject null hypotheses of the right contrast. That is the variances are not the same. However for the left contrast we would fail to reject at a type one error level of 1%.
+Looking at the plot with no transformation visually it appears that non-constant variance seems to be present near the ends of the fitted values. Doing a levene test by taking the absolute values of the residuals vs our predictors in an a mixed effects anova model gives us a p-value of 0.0072 for the right contrast and a p-value of 0.0524. Thus testing at a type 1 error level of 1% we would not reject null hypotheses of the right contrast. **That is the variances are not the same**. However for the left contrast we would fail to reject at a type one error level of 1%.
 
 Model 2: 
 
-Looking at the plot with a transformation visually it appears the non-constant variance is better than the non-transformed model. Looking at the levene test results we have a p-value of 0.387 for the right contrast and a p-value of 0.423 for the left contrast. Thus testing at a type 1 error level of 1% we would fail to reject the null hypothesis for both the right and left contrast. That is failing to reject that null that the variances are the same.   
+Looking at the plot with a transformation visually it appears the non-constant variance is better than the non-transformed model. Looking at the levene test results we have a p-value of 0.387 for the right contrast and a p-value of 0.423 for the left contrast. Thus testing at a type 1 error level of 1% we would fail to reject the null hypothesis for both the right and left contrast. That is failing to reject the null implies that we keep the assumption **that the variances are the same**.   
 
+***
 
-**Independence of error terms:** Given that the experiment was done in trails and we have different session we know that sessions are independent of trails?
+**Independence of error terms:** Given that the experiment was done in trails and we have different session we know that sessions are independent of trails and the trials are all randomized. 
 
 
 **Type 1 or Type 2/3 model** For both model 1 and 2 there is a type two model being used since there is no interactions. This is done by default by R since we have a random mixed effect model.
@@ -380,14 +413,21 @@ Looking at the plot with a transformation visually it appears the non-constant v
 
 From the sensitivity analysis it is clear that model 1 does not pass the non-constant variance assumption. Also model 2 does improve on normality when compared to model 1. More evidence of reasons to select model 2 can be seen in the comparison table below:
 
+
+#### Model 1 vs Model 2 Compasion table
+
 ```{r,echo=FALSE,message=FALSE}
-anova(M1,M2)
+#anova(M1,M2)
+reactable(round(anova(M1,M2),digits = 1),bordered = T,
+          highlight = T,
+          striped = T)
 ```
-**Inference** Looking at the comparison for AIC and BIC it is clear that model 2 is favored with a lower AIC and BIC score. Model 2 also had a larger log likelihood score. All of these show that model 2 is a better fit. Model 2 will be selected for model validation. 
+
+**Inference** Looking at the comparison for AIC and BIC it is clear that model 2 is favored with a lower AIC and BIC score. Model 2 also had a larger log likelihood score. All of these show that model 2 is a better fit. **Model 2 will be selected for model validation.** 
 
 # Model Validation
 
-For this section model validation will be preformed on model 2. The method that is used in this cross validation is k-folds cross validation. Preforming k-fold cross validation the data was randomly split into 13 different groups each containing 92 random observations. Then for each group test and train data was made and using the test data on 13 groups the model MSE was recorded. These 13 scores were then averaged and the final cross-validation MSE score was obtained. For model 2 the C.V-MSE = 0.037. That is to say our model has roughly 3.7% of error. Our method can be descried mathematically below:
+**For this section model validation will be preformed on model 2**. The method that is used in this cross validation is k-folds cross validation. Preforming k-fold cross validation the data was randomly split into 13 different groups each containing 92 random observations. Then for each group test and train data was made and using the test data on 13 groups the model MSE was recorded. These 13 scores were then averaged and the final cross-validation MSE score was obtained. For model 2 the C.V-MSE = 0.037. That is to say our model has roughly 3.7% of error. Our method can be descried mathematically below:
 
 
 \begin{equation}\label{eqn:cv}
@@ -412,7 +452,7 @@ for (i in 1:k) {
 }
 
 cv.MSE = sum(MSE.1k)/k
-cv.MSE
+#cv.MSE
 ```
 
 # Predictive Modeling 
@@ -421,14 +461,16 @@ For this section we now wish to answer the question that is : How to predict the
 To answer this question the outcome variable will use `feedback type`. This is the case since in the experiment the outcome variable they were looking at was if the mouse got the question wrong or correct. To answer this question we will propose a generalized linear model in the form of logistic regression. The model will have the form: 
 
 \begin{equation}\label{eqn:model5}
-\text{logit}(p_i(y)) = \beta_0 +\beta_1X_1 +\sum_{j=2}^4(\beta_{2j}X_{2j} +\beta_{3j}X_{3j}) +\sum_{k=2}^5\beta_{4k}X_{4k} + \epsilon_i
+\text{logit}(p_i(y)) = \beta_0 +\beta_1X_1 +\sum_{j=2}^4(\beta_{2j}X_{2j} +\beta_{3j}X_{3j}) +\sum_{k=2}^5\beta_{4k}X_{4k} 
 \end{equation}
 
 where $p_i(y) = p(y_i =1|X_i)$  $\text{logit}(p) = log(\frac{p}{1-p})$. In this model $p_i(y)$ will be the log-odds of the variable `feedback type`, $X_1$ is defined as `firing rate`. For j={2,3,4} relating to the contrast levels defined in the beginning we define `contrast left` as $X_{2j}$ and$X_{3j}$ as `contrast right`.For k = {2,3,4,5} as session numbers we define $X_{4k}$ as `session`. Please note that 1 is not included in the factor variables since it becomes the reference class.   
 
 The results of this model on the data set can be seen in the table below: 
 
-```{r,echo =F}
+#### Logistic Model Coefficent Summary Table
+
+```{r,echo =F,message=FALSE}
 #data formating and sub setting
 data2 =data
 data2$feedback_type[data2$feedback_type < 0] = 0
@@ -438,17 +480,28 @@ test = data2[1:100,]
 
 logit = glm(formula = feedback_type ~ contrast_left + firing_rate + contrast_right +Session, 
     family = "binomial", data = data2)
-logit
+#summary(logit)
+
+#confint(logit)
+s =summary(logit)
+reactable(round(s$coefficients,digits = 3),
+          defaultPageSize = 4,
+          bordered = T,
+          highlight = T,
+          striped = T)
 ```
-From the plot we have our model that can predict if a mouse will make the correct decision or not. Each coefficient term can be explained such as this : For each unit change in `variable` the log-odds of a mouse making the correct choice change by `coefficent` while all others fixed. For example for each unit change in  `firing rate` the logg odds of a mouse making the correct choice increase by 0.96 while all others are fixed. Thus in our case it might seem like if the firing rate is higher the mouse might have a better chance of getting it correct. This a large assumption if we don't include it might seem.
+From the plot we have our model that can predict if a mouse will make the correct decision or not. Each coefficient term can be explained such as this : For each unit change in `variable` the log-odds of a mouse making the correct choice change by `coefficent` while all others fixed. For example for each unit change in  `firing rate` the logg odds of a mouse making the correct choice increase by 0.96 while all others are fixed. Thus in our case it might seem like if the firing rate is higher the mouse might have a better chance of getting it correct. This a large assumption if we don't include it might seem. This model has a AIC score of 1445.8. A 95% confidence interval for each predictor can also be seen below the summary table of the model.
 
 
-Now that we have our model we will do model validation to test how well our model works. We will split the data into 2 sets a test data that contains the first 100 trails from session 2 and training set that will contain the rest of 1096 trails. First we will fit our training data into the model then using the test data predicit the results. An ROC curve to determine the best threshold to give up the best TPR and FPR. 
+Now that we have our model we will do model validation to test how well our model works. We will split the data into 2 sets a test data that contains the first 100 trails from session 2 and training set that will contain the rest of 1096 trails. First we will fit our training data into the model then using the test data predict the results. An ROC curve to determine the best threshold to give up the best TPR and FPR. 
 
-```{r,echo=FALSE,fig.align='center'}
+#### ROC Curve
+
+```{r,echo=FALSE,fig.align='center',message=FALSE,warning=FALSE}
 leek = glm(formula = feedback_type ~ contrast_left + firing_rate + contrast_right+Session,
     family = "binomial", data = train)
 
+# by hand making the plot
 thresholds <- seq(0.36, 0.98, 0.005)
 TPR <- numeric(length(thresholds))
 FPR <- numeric(length(thresholds))
@@ -467,13 +520,18 @@ for (i in 1:length(thresholds)) {
 #head(cbind(thresholds, TPR, FPR))
 #tail(cbind(thresholds, TPR, FPR))
 plot(x=FPR,y=TPR,col = "red")
-```
-**Inference**Looking at the ROC curve it is easy to see that the curve is not extremely efficient. Other models using Step-wise AIC were also considered however models selected gave unsatisfactory results. Looking at the ROC curve a thresh-hold value of p = 0.825 was chosen that gives a True Positive rate (TPR) pf 44% and false positive rate (FPR) of 7%. Adding an interaction term to this model with the variables `Session` and `firing rate` led to a TPR of 54% and a FPR of 11%. However this model was still chosen since it is additive and gives a lower FPR. The summary table of the results at our threshold are below:
 
-```{r}
+# using the function
+library(pROC)
+roc =roc(test$feedback_type,predict(leek,newdata = test, type = "response"))
+
+```
+
+**Inference: **Looking at the ROC curve it is easy to see that the curve is not extremely efficient. Other models using Step-wise AIC were also considered however models selected gave unsatisfactory results. **The ROC curve has an area of 0.693**. Looking at the ROC curve a thresh-hold value of p = 0.825 was chosen that gives a True Positive rate (TPR) pf 44% and false positive rate (FPR) of 7%. Adding an interaction term to this model with the variables `Session` and `firing rate` led to a TPR of 54% and a FPR of 11%. However this model was still chosen since it is additive and gives a lower FPR. The summary table of the results at our threshold are below:
+
+```{r,echo=FALSE}
 predicted <- ifelse(predict(leek,newdata = test, type = "response")>.825,"Correct(1)","Incorrect(0)")
 table(predicted,factor(test$feedback_type),dnn = c("predicted","True-Values"))
-
 ```
 
 # Discussion 
