@@ -1,0 +1,304 @@
+---
+title: "MS Comprehensive Exam 2022"
+date: "STA 207  (100 points)"
+output: html_document
+---
+
+<span style="color:red">**Read the instructions on Canvas carefully!**</span>
+
+___
+
+**Name**: 
+
+**Student ID**: 
+
+Sites: 
+
+https://nbviewer.jupyter.org/github/ChenShizhe/StatDataScience/tree/master/Notes/
+
+https://stat.ethz.ch/~meier/teaching/anova/block-designs.html
+
+
+
+___
+
+```{r,echo=T,results=F,message=F}
+library(lme4)
+```
+
+In this exam, we investigate the `ChickWeight` dataset in `R`. You can load the data using the following commands. Carefully read the help file of `ChickWeight` before working on the following questions. 
+```{r, echo=T}
+data(ChickWeight)
+```
+
+***
+
+**(a) Briefly summarize all variables in the data set. You need to provide the definition of the variable and quantitative summary. **
+
+<b> Solution: </b>  Description definition gotten directly from help file.  
+weight :a numeric vector giving the body weight of the chick (gm). The min max range of the data is contained within [35,373] with a mean of 121.8 and standard devation of 71.1
+
+Time: a numeric vector giving the number of days since birth when the measurement was made. The min/max range is [0, 21] days and data is captured every 2 days from the 0th day except the 21st day.
+
+Chick :an ordered factor with levels 18 < ... < 48 giving a unique identifier for the chick. The ordering of the levels groups chicks on the same diet together and orders them according to their final weight (lightest to heaviest) within diet. The number of observations of each chick is not all the same. Chicks 18,16,15,8 and 44 all have less then 12 observations while the rest have 12
+
+Diet: a factor with levels 1, ..., 4 indicating which experimental diet the chick received. The distribution of each diet is not uniform Diet 1 has the most at 220 observations, Diets 2,3 and 4 respectively have 120,120 and 118 observations. 
+
+
+```{r}
+# help("ChickWeight")
+
+sapply(ChickWeight, FUN = summary)
+
+sapply(ChickWeight[1:2], FUN = sd)
+
+```
+
+
+
+
+**(b) Visualize the weights of each chicks over time in one plot, where (i) each chick is represented by one solid curve, and (ii) the `diet` is color-coded as black (1), red (2), green (3), and blue (4). In addition to the required visualization, you may add any supporting curves, symbols, or any additional plots that you find informative.**
+	
+<b> Solution: </b>  (Type your answer here)
+
+
+```{r}
+# (b).
+library(ggplot2)
+#plot 1
+ggplot( data = ChickWeight, aes(x= Time,y = weight,group = Chick)) + geom_line()
+
+#plot 1
+ggplot( data = ChickWeight, aes(x= Time,y = weight,group = Chick, col = Diet)) + geom_line()+ scale_color_manual(values=c("black", "red","green","blue"))
+
+```
+
+
+If there is a question about plotting the man effects or interaction plot then use library(gplots) 
+
+`plotmeans(Y~X,data,xlab="X",ylab="Y",main="Main effects for X levels",cex.lab=1)`
+
+`interaction.plot()`
+
+***
+
+
+
+**(c) Write down an appropriate one-way ANOVA model to answer the question whether there is any changes in mean weights at Day 20 across the four diet group. To receive full credits, you need to (i) write down the model, explain your notation, constraint(s) and/or assumptions; (ii) state the null and alternative hypotheses; (iii) state the test result. You can find basic LaTeX commands at the end of this file.  **
+
+
+<b> Solution: </b>  
+
+A one way-anova model takes the factor effected form: 
+
+$Y_{ij}= \mu + \alpha_i + \epsilon_{ij}$ , j = 1,...,$n_i$ & i = 1,..., r=4
+
+where $\alpha_i$ satisfies $\sum_{i=1}^rn_i\alpha_i = 0$. Also $\epsilon_{ij}$ are i.i.d $N(0,\sigma^2)$. It should be noted that this model is unbalanced and only uses data from day 20.
+
+In this model: 
+$\alpha_i$ represents the main effects of diets for i = 1,2,3,4. r = 4
+
+$Y_{ij}$ represents the jth weight in the ith diet. 
+
+$\mu$ represents the mean weight in the population. 
+
+$\epsilon_{ij}$ captures any unexplained effects of the weights.
+
+$n_i$ Values can be seen below
+
+
+#### Hypothesis testing:
+
+$H_0: \alpha_1 = ... = \alpha_4 =0$ and $H_a:\text{not all } \alpha_i's \text{ equal zero.}$
+
+We will set type 1 error level to $\alpha = 0.05$
+
+$F^* = \frac{MSTR}{MSE} = \frac{18627}{3409} = 5.46$
+
+$P- value =  .0029$ and P-value is less than set alpha level. Thus we will reject the null-hypothesis.
+
+The results of this test find that we can reject the null hypothesis that all $\alpha_i = 0$ at the $\alpha = 0.05$ level. 
+
+That is to say there are differences in the means of weight with respect to different diets.
+
+```{r}
+# (c). First need data to be of day 20
+
+d20 = ChickWeight[ChickWeight$Time == 20,]
+ni =table(d20$Diet)
+ni
+
+fit1 = aov(d20$weight~d20$Diet)
+summary(fit1)
+```
+
+	
+
+**(d) For the model fitted in (c), carry out necessary diagnostics to check if the model assumptions are valid. What are your findings?**
+
+<b> Solution: </b> 
+
+**Normality** of the errors: We can see this by looking at the QQ-plot and we find that our errors are **FILL IN** normally distributed
+
+**Constant Variance** of the error terms: From the studentized residuals vs fitted plot we can see **Fill IN** evidence of non-constant variance thus our assumption **Fill In**. To double check using the Levine test we find that testing the null that all are variances are the same against are altnetive they are not we find that **Fill in**
+
+**Outliers** From the studentized residuals vs fitted plot we can see **Fill IN** evidence of outliers
+
+**independence for error terms.** (No test because independence depends on the design of the experiment; not reflected in data).
+
+```{r,message=F}
+# (d).
+# QQ plot
+plot(fit1, which = 2) 
+
+# studentized residuals
+resid.stu = rstudent(fit1)
+
+# studentized residuals vs fitted
+plot(resid.stu~fit1$fitted.values,pch = 16, main = "studentized residuals vs fitted") 
+abline(h=0)
+
+library(car)
+leveneTest(fit1) # fail to reject the null that all variances are the same at alpha = .05. 
+```
+
+
+**(e) Write down an appropriate two-way ANOVA model with fixed effect to answer the question whether there is any differences in growth rates across the four diet groups. Here the growth rate can be roughly seen as the effects of `Time` on `weight`. To receive full credits, you need to (i) write down the model, explain your notation, constraint(s) and/or assumptions; (ii) state the null and alternative hypotheses; (iii) state the test result. Hint: You may want to recycle the answer in (c) to save time. **
+
+
+<b> Solution: </b>
+
+The 2-way anova model will follow the form: 
+
+\begin{equation}\label{eqn:anova2}
+Y_{ijk}=\mu.. + \alpha_i+\beta_j + (\alpha\beta)_{ij} + \epsilon_{ijk},\ k=1,\dots,n_{ij}, \ j=1,\ldots, b=**12**, i =1,\ldots, a=**4**,
+\end{equation}
+where $\{\epsilon_{ijk}\}$ are i.i.d. $N(0,\sigma^2)$ and the constraints are: 
+
+\begin{equation}\label{eqn:anova2 constrants}
+\sum_{i=1}^a\alpha_i = \sum_{j=1}^b \beta_j = 0 \\ \sum_{i=1}^a(\alpha\beta)_{ij}=\sum_{j=1}^b(\alpha\beta)_{ij} = 0   
+\end{equation}
+
+Further definitions for the model include the following:
+
+\begin{equation}\label{eqn:definitions}
+\mu.. = \frac{1}{ab}\sum_{i=1}^a\sum_{j=1}^b\mu_{ij}, \quad \mu_i.= \frac{1}{b}\sum_{j=1}^b\mu_{ij}, \quad \mu_{.j} = \frac{1}{a}\sum_{i=1}^a\mu_{ij}  \alpha_i = \mu_i.- \mu.., 
+\end{equation}
+
+\begin{equation}\label{eqn:definitions 2}
+\alpha_i = \mu_i.- \mu..,\quad \beta_j = \mu_{.j} - \mu..,\quad (\alpha\beta)_{ij} = \mu_{ij} -\mu_i.-\mu_{.j} +\mu..
+\end{equation}
+
+In this model: 
+$\alpha_i$ represents the main effects of **Factor 1** for level i = 1,..,.4. **a = 4**
+
+$\beta_j$ represents the main effects of **Factor 2** for day 0,2,4,..,20,21 calling each a level j = 1,2,...,12. **b = 12**
+
+$(\alpha\beta)_{ij}$ represent the interaction of the main effects of **Factor 1 and Factor 2** at the (i,j)th level.
+
+$Y_{ijk}$ now represents the **Response** at the **Factor1** level i and jth **Factor 2** level for subject k. 
+
+$\mu..$ represents the population mean weight. 
+
+$\epsilon_{ijk}$ captures any unexplained effects of the weights.
+
+$n_{ij}$ values can be seen below
+
+#### Hypothesis testing:
+
+**For main effects of Factor 1:**
+
+$H_0: \alpha_1 = ... = \alpha_4 =0$ and $H_a:\text{not all } \alpha_i's \text{ equal zero.}$
+
+We will set type 1 error level to $\alpha = 0.05$
+
+$F^* = 43.6$
+
+$P- value =  <2e-16$ and P-value is less than set alpha level. Thus we will reject the null-hypothesis.
+
+The results of this test find that we can reject the null hypothesis that all $\alpha_i = 0$ at the $\alpha = 0.05$ level. 
+
+
+**For main effects of Factor 2:**
+
+$H_0: \beta_1 = ... = \beta_12 =0$ and $H_a:\text{not all } \beta_j's \text{ equal zero.}$
+
+We will set type 1 error level to $\alpha = 0.05$
+
+$F^* = 155.8$
+
+$P- value =  <2e-16$ and P-value is less than set alpha level. Thus we will reject the null-hypothesis.
+
+The results of this test find that we can reject the null hypothesis that all $\beta_j = 0$ at the $\alpha = 0.05$ level. 
+
+**For effects of interaction of Factor 1 and Factor 2 :** 
+
+
+$H_0: (\alpha\beta)_{1,1} = ... = (\alpha\beta)_{a,b}$ and $H_a:\text{not all } (\alpha\beta)_{i,j}'s \text{ equal zero.}$
+
+We will set type 1 error level to $\alpha = 0.05$
+
+$F^* = 2.2$
+
+$P- value =  0.00017$ and P-value is less than set alpha level. Thus we will reject the null-hypothesis.
+
+The results of this test find that we can reject the null hypothesis that all $(\alpha\beta)_{i,j}'s$ equal zero at the $\alpha = 0.05$ level.
+
+**Thus testing finds main effects of diet to be significant, the main effects of time to be significant and their interaction to be significant at the type on error level of 0.05.**
+
+## Levene's test
+# Get absolute value of residuals
+residuals = model1$residuals
+temp$abs.res = abs(residuals)
+# Conduct anova test using abs of residuals as response variable
+summary(aov(abs.res ~Diet, data=temp))
+
+```{r}
+# (e). 
+nij=table(ChickWeight$Diet,as.factor(ChickWeight$Time))
+nij
+
+fit2 = aov(weight~Diet*as.factor(Time) , data = ChickWeight)
+summary(fit2)
+
+
+```
+
+
+***
+
+**(f) We want to take the chick-specific effect into account. The new mixed effect model is based on the model in (e), where `Time` is treated as a continuous covariate instead of a categorical factor, and a random intercept and a random slope (of `Time`) are added into the model. Report the fitted coefficients of the fixed effects, and summarize your findings from this model. Hint: You do not need to write down the new model, but you may find it helpful.  **
+
+<b> Solution: </b>  
+
+X1 is the term that we want to be random
+
+(1|X1): random intercept of that variable 
+(0+X2|X1): random slope for x1 per x2
+
+
+
+```{r}
+# (f). 
+
+fit3 = lmer(weight~ Diet*Time +(1|Chick) +(0+Time|Chick) , data = ChickWeight)
+summary(fit3)
+```
+
+
+***
+
+**(g) Assume that the chicks in each diet are randomly selected from the same population, i.e., the enrollment of chicks is independent from any other factors. State the Stable Unit Treatment Value Assumption, write down the potential outcomes (weight at Day 20), and verify whether the randomization assumption holds. (This question will be replaced by another, since causal inference will not be covered this quarter.)** 
+	
+
+<b> Solution: </b>  (Type your answer here) 
+
+
+
+
+***
+
+**LaTeX commands**
+
+$$Y_{i,j,k}, \mu, \alpha, \beta, \epsilon, i, j, H_0, H_a, \neq, =, \ldots$$
+
