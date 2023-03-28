@@ -18,6 +18,8 @@ https://nbviewer.jupyter.org/github/ChenShizhe/StatDataScience/tree/master/Notes
 
 https://stat.ethz.ch/~meier/teaching/anova/block-designs.html
 
+https://github.com/Matt2371/ucd-comp-exam/blob/main/STA_207/logistic_regression.Rmd
+
 
 
 ___
